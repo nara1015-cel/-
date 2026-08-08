@@ -21,7 +21,8 @@
   },
   {
     "name": "洗顔料",
-    "status": "pending"
+    "status": "done",
+    "article_path": "site/articles/洗顔料.html"
   },
   {
     "name": "ハンドクリーム",
