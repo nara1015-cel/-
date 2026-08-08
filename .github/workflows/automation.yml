@@ -34,7 +34,7 @@ jobs:
           python-version: "3.12"
 
       - name: 依存パッケージをインストール
-        run: pip install anthropic
+        run: pip install anthropic requests
 
       - name: タスク種別を判定
         id: task
@@ -53,6 +53,9 @@ jobs:
       - name: タスクを実行
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          RAKUTEN_APP_ID: ${{ secrets.RAKUTEN_APP_ID }}
+          RAKUTEN_ACCESS_KEY: ${{ secrets.RAKUTEN_ACCESS_KEY }}
+          RAKUTEN_AFFILIATE_ID: ${{ secrets.RAKUTEN_AFFILIATE_ID }}
         run: python scripts/run_task.py ${{ steps.task.outputs.name }}
 
       - name: 変更をコミット・プッシュ
