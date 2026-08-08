@@ -59,10 +59,6 @@ jobs:
         run: |
           git config user.name "kurashi-monosashi-bot"
           git config user.email "actions@users.noreply.github.com"
-          for dir in genres pinterest site; do
-            if [ -d "$dir" ]; then
-              git add "$dir"
-            fi
-          done
+          git add -A
           git diff --cached --quiet || git commit -m "自動更新: ${{ steps.task.outputs.name }} タスク実行 ($(date +'%Y-%m-%d'))"
           git push
