@@ -278,13 +278,19 @@ def task_article() -> None:
         items = search_rakuten_item(product_name, hits=3)
         candidates = []
         for item in items:
+            image_urls = item.get("mediumImageUrls") or []
+            if image_urls and isinstance(image_urls[0], dict):
+                image_url = image_urls[0].get("imageUrl", "")
+            elif image_urls:
+                image_url = image_urls[0]
+            else:
+                image_url = ""
             candidates.append({
                 "itemName": item.get("itemName"),
                 "itemPrice": item.get("itemPrice"),
                 "itemUrl": item.get("itemUrl"),
                 "affiliateUrl": item.get("affiliateUrl") or item.get("itemUrl"),
-                "imageUrl": (item.get("mediumImageUrls") or [{}])[0].get("imageUrl", "")
-                if item.get("mediumImageUrls") else "",
+                "imageUrl": image_url,
             })
         review_candidates.append({"searched_as": product_name, "candidates": candidates})
 
