@@ -20,9 +20,11 @@ import datetime
 from pathlib import Path
 
 import anthropic
+import requests
 
 MODEL = "claude-sonnet-5"
 MAX_TOKENS = 8000
+RAKUTEN_SEARCH_URL = "https://app.rakuten.co.jp/services/api/IchibaItem/Search/20220601"
 
 ROOT = Path(__file__).resolve().parent.parent
 SITE_DIR = ROOT / "site"
@@ -42,6 +44,46 @@ def call_claude(prompt: str) -> str:
         messages=[{"role": "user", "content": prompt}],
     )
     return "".join(block.text for block in message.content if block.type == "text")
+
+
+def search_rakuten_item(keyword: str, hits: int = 3) -> list:
+    """楽天商品検索APIで商品候補を検索する。
+
+    注意: 楽天のAPI認証方式は複数世代が混在している可能性があるため、
+    アプリケーションID(パラメータ)とアクセスキー(ヘッダー)の両方を送る。
+    実行してエラーが出た場合は、GitHub Actionsのログに表示されるレスポンス内容を
+    確認し、最新の楽天Developersドキュメントに合わせて調整すること。
+    """
+    app_id = os.environ.get("RAKUTEN_APP_ID", "")
+    access_key = os.environ.get("RAKUTEN_ACCESS_KEY", "")
+    affiliate_id = os.environ.get("RAKUTEN_AFFILIATE_ID", "")
+
+    if not app_id:
+        print("警告: RAKUTEN_APP_ID が設定されていないため、商品検索をスキップします。")
+        return []
+
+    params = {
+        "applicationId": app_id,
+        "keyword": keyword,
+        "hits": hits,
+        "sort": "standard",
+        "formatVersion": 2,
+    }
+    if affiliate_id:
+        params["affiliateId"] = affiliate_id
+
+    headers = {}
+    if access_key:
+        headers["Authorization"] = f"Bearer {access_key}"
+
+    try:
+        resp = requests.get(RAKUTEN_SEARCH_URL, params=params, headers=headers, timeout=15)
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get("Items", [])
+    except Exception as exc:  # noqa: BLE001
+        print(f"警告: 楽天商品検索でエラー（keyword={keyword}）: {exc}")
+        return []
 
 
 def load_pool() -> list:
@@ -198,7 +240,8 @@ def task_article() -> None:
   "price_range": "例: 680円〜2,178円",
   "product_count": 6,
   "read_minutes": 7,
-  "frequency": "{genre_name}の一般的な買い替え頻度（例: 1〜2ヶ月）"
+  "frequency": "{genre_name}の一般的な買い替え頻度（例: 1〜2ヶ月）",
+  "products": ["記事内で比較した実在の商品名を、本文中の<h3>と完全一致する形でここに列挙"]
 }}
 ```"""
 
@@ -213,6 +256,43 @@ def task_article() -> None:
         except json.JSONDecodeError:
             print("警告: メタ情報のJSON抽出に失敗しました。")
     article_html = result[: match.start()].strip() if match else result.strip()
+
+    # ---- 楽天商品検索APIで候補を取得し、確認用ファイルと仮リンクを作る ----
+    products = meta.get("products", [])
+    review_candidates = []
+    for product_name in products:
+        items = search_rakuten_item(product_name, hits=3)
+        candidates = []
+        for item in items:
+            candidates.append({
+                "itemName": item.get("itemName"),
+                "itemPrice": item.get("itemPrice"),
+                "itemUrl": item.get("itemUrl"),
+                "affiliateUrl": item.get("affiliateUrl") or item.get("itemUrl"),
+                "imageUrl": (item.get("mediumImageUrls") or [{}])[0].get("imageUrl", "")
+                if item.get("mediumImageUrls") else "",
+            })
+        review_candidates.append({"searched_as": product_name, "candidates": candidates})
+
+        # 本文中の該当<h3>商品名</h3>を、一番手の候補で「未確認」の仮リンクに置き換える
+        if candidates:
+            top = candidates[0]
+            h3_target = f"<h3>{product_name}</h3>"
+            h3_replacement = (
+                f'<h3>⚠<a href="{top["affiliateUrl"]}" target="_blank" '
+                f'rel="nofollow sponsored noopener">{product_name}</a>'
+                f'<span style="font-size:.7rem;color:var(--brick);"> [要確認: 自動取得候補]</span></h3>'
+            )
+            if h3_target in article_html:
+                article_html = article_html.replace(h3_target, h3_replacement, 1)
+
+    if products:
+        ARTICLES_DIR.mkdir(parents=True, exist_ok=True)
+        review_path = ARTICLES_DIR / f"{slugify(genre_name)}.links_review.json"
+        review_path.write_text(
+            json.dumps(review_candidates, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        print(f"楽天商品候補の確認用ファイルを生成: {review_path}")
 
     slug = slugify(genre_name)
     ARTICLES_DIR.mkdir(parents=True, exist_ok=True)
@@ -257,6 +337,7 @@ def task_article() -> None:
 </div>
 
 <div class="article-body">
+{"<div class=\"callout warn\"><strong>公開前の確認事項</strong>この記事には楽天商品検索APIで自動取得したリンク候補が含まれています。⚠マークの付いた商品名は、実際の商品ページと一致しているか、公開前に必ず確認してください。</div>" if products else ""}
 {article_html}
 </div>
 
