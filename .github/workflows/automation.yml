@@ -17,6 +17,7 @@ on:
           - genre
           - article
           - pinterest
+          - relink
 
 permissions:
   contents: write
