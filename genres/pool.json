@@ -1,7 +1,8 @@
 [
   {
     "name": "シャンプー・コンディショナー",
-    "status": "pending"
+    "status": "done",
+    "article_path": "site/articles/シャンプーコンディショナー.md"
   },
   {
     "name": "洗濯洗剤・柔軟剤",
