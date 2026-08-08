@@ -14,6 +14,7 @@
 import os
 import re
 import sys
+import time
 import json
 import glob
 import datetime
@@ -24,7 +25,12 @@ import requests
 
 MODEL = "claude-sonnet-5"
 MAX_TOKENS = 8000
-RAKUTEN_SEARCH_URL = "https://app.rakuten.co.jp/services/api/IchibaItem/Search/20220601"
+# 注意: 楽天のAPIエンドポイントは2026年に app.rakuten.co.jp/services/api/... から
+# openapi.rakuten.co.jp/ichibams/api/... へ変更された。パス構造・バージョンともに
+# 変わっているので、404/400/403が出た場合はまず楽天Developersの最新ドキュメントで
+# エンドポイントを確認すること。
+RAKUTEN_SEARCH_URL = "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601"
+RAKUTEN_REQUEST_INTERVAL_SEC = 1.5  # 連続リクエストの間隔（429対策）
 
 ROOT = Path(__file__).resolve().parent.parent
 SITE_DIR = ROOT / "site"
@@ -49,14 +55,13 @@ def call_claude(prompt: str) -> str:
 def search_rakuten_item(keyword: str, hits: int = 3) -> list:
     """楽天商品検索APIで商品候補を検索する。
 
-    注意: 楽天のAPI認証方式は複数世代が混在している可能性があるため、
-    アプリケーションID(パラメータ)とアクセスキー(ヘッダー)の両方を送る。
-    実行してエラーが出た場合は、GitHub Actionsのログに表示されるレスポンス内容を
-    確認し、最新の楽天Developersドキュメントに合わせて調整すること。
+    2026年仕様: applicationId・accessKey・affiliateId をすべてクエリパラメータに含め、
+    Refererヘッダーを付与する。連続呼び出し時は429対策で一定間隔を空ける。
     """
     app_id = os.environ.get("RAKUTEN_APP_ID", "")
     access_key = os.environ.get("RAKUTEN_ACCESS_KEY", "")
     affiliate_id = os.environ.get("RAKUTEN_AFFILIATE_ID", "")
+    site_url = os.environ.get("SITE_URL", "https://example.com")
 
     if not app_id:
         print("警告: RAKUTEN_APP_ID が設定されていないため、商品検索をスキップします。")
@@ -67,23 +72,32 @@ def search_rakuten_item(keyword: str, hits: int = 3) -> list:
         "keyword": keyword,
         "hits": hits,
         "sort": "standard",
+        "format": "json",
         "formatVersion": 2,
     }
+    if access_key:
+        params["accessKey"] = access_key
     if affiliate_id:
         params["affiliateId"] = affiliate_id
 
-    headers = {}
-    if access_key:
-        headers["Authorization"] = f"Bearer {access_key}"
+    headers = {
+        "Referer": site_url,
+        "Origin": site_url,
+        "User-Agent": "Mozilla/5.0 (compatible; kurashi-monosashi-bot/1.0)",
+    }
 
     try:
         resp = requests.get(RAKUTEN_SEARCH_URL, params=params, headers=headers, timeout=15)
-        resp.raise_for_status()
+        if resp.status_code != 200:
+            print(f"警告: 楽天商品検索でエラー（keyword={keyword}）: {resp.status_code} {resp.text[:300]}")
+            return []
         data = resp.json()
         return data.get("Items", [])
     except Exception as exc:  # noqa: BLE001
-        print(f"警告: 楽天商品検索でエラー（keyword={keyword}）: {exc}")
+        print(f"警告: 楽天商品検索で例外（keyword={keyword}）: {exc}")
         return []
+    finally:
+        time.sleep(RAKUTEN_REQUEST_INTERVAL_SEC)
 
 
 def load_pool() -> list:
@@ -285,6 +299,16 @@ def task_article() -> None:
             )
             if h3_target in article_html:
                 article_html = article_html.replace(h3_target, h3_replacement, 1)
+
+            # 比較表内の同じ商品名の行にある価格セル（td class="num"）を実価格に置き換える
+            # 表の行は <td>商品名</td>...<td class="num">価格円</td> の並びを想定
+            row_pattern = re.compile(
+                r'(<tr>\s*<td>' + re.escape(product_name) + r'</td>\s*<td class="num">)([\d,]+円[^<]*)(</td>)'
+            )
+            real_price = f'{top["itemPrice"]:,}円 <span style="color:var(--brick);font-size:.75rem;">[実勢価格・要確認]</span>'
+            article_html, n = row_pattern.subn(r"\g<1>" + real_price + r"\g<3>", article_html, count=1)
+            if n == 0:
+                print(f"注意: 比較表の価格セルが自動置換できませんでした（{product_name}）。手動確認してください。")
 
     if products:
         ARTICLES_DIR.mkdir(parents=True, exist_ok=True)
