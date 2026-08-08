@@ -175,6 +175,113 @@ def slugify(name: str) -> str:
     return base or "genre"
 
 
+def build_pc_head_block(product_name: str, top: dict) -> str:
+    price_text = f'{top["itemPrice"]:,}円' if top.get("itemPrice") else "価格不明"
+    image_html = (
+        f'<img src="{top["imageUrl"]}" alt="{product_name}" width="120" height="120" loading="lazy">'
+        if top.get("imageUrl")
+        else ""
+    )
+    return f"""<div class="pc-head">
+      <a href="{top['affiliateUrl']}" target="_blank" rel="nofollow sponsored noopener" class="pc-photo">
+        {image_html}
+      </a>
+      <div>
+        <h3><a href="{top['affiliateUrl']}" target="_blank" rel="nofollow sponsored noopener">{product_name}</a><span style="font-size:.7rem;color:var(--brick);"> ⚠[要確認: 自動取得候補]</span></h3>
+        <p class="pc-price">価格：{price_text} <span class="mono">[実勢価格・要確認]</span></p>
+        <a href="{top['affiliateUrl']}" target="_blank" rel="nofollow sponsored noopener" class="pc-buybtn">楽天で見る</a>
+      </div>
+    </div>"""
+
+
+def embed_rakuten_links(article_html: str, product_names: list) -> tuple:
+    """記事HTML内の商品名を、楽天API検索結果をもとに画像付きリンクへ置き換える。
+    plainの<h3>商品名</h3>と、既存のpc-head形式（再実行時）の両方に対応する。
+    戻り値: (更新後のHTML, レビュー用candidatesリスト)
+    """
+    review_candidates = []
+    for product_name in product_names:
+        items = search_rakuten_item(product_name, hits=3)
+        candidates = []
+        for item in items:
+            image_urls = item.get("mediumImageUrls") or []
+            if image_urls and isinstance(image_urls[0], dict):
+                image_url = image_urls[0].get("imageUrl", "")
+            elif image_urls:
+                image_url = image_urls[0]
+            else:
+                image_url = ""
+            candidates.append({
+                "itemName": item.get("itemName"),
+                "itemPrice": item.get("itemPrice"),
+                "itemUrl": item.get("itemUrl"),
+                "affiliateUrl": item.get("affiliateUrl") or item.get("itemUrl"),
+                "imageUrl": image_url,
+            })
+        review_candidates.append({"searched_as": product_name, "candidates": candidates})
+
+        if not candidates:
+            continue
+        top = candidates[0]
+        pc_head_block = build_pc_head_block(product_name, top)
+
+        # パターン1: すでにpc-head形式で埋め込み済み（再実行・更新のケース）
+        existing_pc_head_pattern = re.compile(
+            r'<div class="pc-head">.*?<h3>(?:<a[^>]*>)?'
+            + re.escape(product_name)
+            + r'(?:</a>)?.*?</div>\s*</div>',
+            re.DOTALL,
+        )
+        article_html, n = existing_pc_head_pattern.subn(pc_head_block, article_html, count=1)
+
+        # パターン2: まだプレーンテキストの<h3>商品名</h3>（初回埋め込み）
+        if n == 0:
+            plain_target = f"<h3>{product_name}</h3>"
+            if plain_target in article_html:
+                article_html = article_html.replace(plain_target, pc_head_block, 1)
+                n = 1
+
+        if n == 0:
+            print(f"注意: 商品名「{product_name}」の<h3>タグが本文から見つからず、リンクを埋め込めませんでした。")
+
+        # 比較表内の同じ商品名の行にある価格セルを実価格に置き換える
+        row_pattern = re.compile(
+            r'(<tr>\s*<td>' + re.escape(product_name) + r'</td>\s*<td class="num">)([\d,]+円[^<]*)(</td>)'
+        )
+        real_price = f'{top["itemPrice"]:,}円 <span style="color:var(--brick);font-size:.75rem;">[実勢価格・要確認]</span>' if top.get("itemPrice") else None
+        if real_price:
+            article_html, tn = row_pattern.subn(r"\g<1>" + real_price + r"\g<3>", article_html, count=1)
+            if tn == 0:
+                # すでに実勢価格に置き換え済みの場合は、その値を新しい価格で上書きする
+                already_pattern = re.compile(
+                    r'(<tr>\s*<td>' + re.escape(product_name) + r'</td>\s*<td class="num">)([\d,]+円.*?)(</td>)',
+                    re.DOTALL,
+                )
+                article_html, tn2 = already_pattern.subn(r"\g<1>" + real_price + r"\g<3>", article_html, count=1)
+                if tn2 == 0:
+                    print(f"注意: 比較表の価格セルが自動置換できませんでした（{product_name}）。手動確認してください。")
+
+    return article_html, review_candidates
+
+
+def extract_product_names_from_article(article_html: str) -> list:
+    """記事HTML内のproduct-cardから商品名を抽出する（relinkタスク用）。
+    プレーンな<h3>名前</h3>と、pc-head内のリンク済み<h3><a>名前</a>...</h3>の両方に対応。
+    """
+    names = []
+    for m in re.finditer(r'<h3><a[^>]*>(.*?)</a>', article_html):
+        names.append(m.group(1).strip())
+    for m in re.finditer(r'<h3>([^<>]+)</h3>', article_html):
+        names.append(m.group(1).strip())
+    seen = set()
+    result = []
+    for n in names:
+        if n and n not in seen and not n.startswith("①") and not n.startswith("②") and not n.startswith("③"):
+            seen.add(n)
+            result.append(n)
+    return result
+
+
 def task_article() -> None:
     pool = load_pool()
     pending = [g for g in pool if g["status"] == "pending"]
@@ -271,61 +378,9 @@ def task_article() -> None:
             print("警告: メタ情報のJSON抽出に失敗しました。")
     article_html = result[: match.start()].strip() if match else result.strip()
 
-    # ---- 楽天商品検索APIで候補を取得し、確認用ファイルと仮リンクを作る ----
+    # ---- 楽天商品検索APIで候補を取得し、確認用ファイルと画像付きリンクを埋め込む ----
     products = meta.get("products", [])
-    review_candidates = []
-    for product_name in products:
-        items = search_rakuten_item(product_name, hits=3)
-        candidates = []
-        for item in items:
-            image_urls = item.get("mediumImageUrls") or []
-            if image_urls and isinstance(image_urls[0], dict):
-                image_url = image_urls[0].get("imageUrl", "")
-            elif image_urls:
-                image_url = image_urls[0]
-            else:
-                image_url = ""
-            candidates.append({
-                "itemName": item.get("itemName"),
-                "itemPrice": item.get("itemPrice"),
-                "itemUrl": item.get("itemUrl"),
-                "affiliateUrl": item.get("affiliateUrl") or item.get("itemUrl"),
-                "imageUrl": image_url,
-            })
-        review_candidates.append({"searched_as": product_name, "candidates": candidates})
-
-        # 本文中の該当<h3>商品名</h3>を、画像・価格・購入ボタン付きのブロックに置き換える
-        if candidates:
-            top = candidates[0]
-            h3_target = f"<h3>{product_name}</h3>"
-            price_text = f'{top["itemPrice"]:,}円' if top.get("itemPrice") else "価格不明"
-            image_html = (
-                f'<img src="{top["imageUrl"]}" alt="{product_name}" width="120" height="120" loading="lazy">'
-                if top.get("imageUrl")
-                else ""
-            )
-            pc_head_block = f"""<div class="pc-head">
-      <a href="{top['affiliateUrl']}" target="_blank" rel="nofollow sponsored noopener" class="pc-photo">
-        {image_html}
-      </a>
-      <div>
-        <h3><a href="{top['affiliateUrl']}" target="_blank" rel="nofollow sponsored noopener">{product_name}</a><span style="font-size:.7rem;color:var(--brick);"> ⚠[要確認: 自動取得候補]</span></h3>
-        <p class="pc-price">価格：{price_text} <span class="mono">[実勢価格・要確認]</span></p>
-        <a href="{top['affiliateUrl']}" target="_blank" rel="nofollow sponsored noopener" class="pc-buybtn">楽天で見る</a>
-      </div>
-    </div>"""
-            if h3_target in article_html:
-                article_html = article_html.replace(h3_target, pc_head_block, 1)
-
-            # 比較表内の同じ商品名の行にある価格セル（td class="num"）を実価格に置き換える
-            # 表の行は <td>商品名</td>...<td class="num">価格円</td> の並びを想定
-            row_pattern = re.compile(
-                r'(<tr>\s*<td>' + re.escape(product_name) + r'</td>\s*<td class="num">)([\d,]+円[^<]*)(</td>)'
-            )
-            real_price = f'{top["itemPrice"]:,}円 <span style="color:var(--brick);font-size:.75rem;">[実勢価格・要確認]</span>'
-            article_html, n = row_pattern.subn(r"\g<1>" + real_price + r"\g<3>", article_html, count=1)
-            if n == 0:
-                print(f"注意: 比較表の価格セルが自動置換できませんでした（{product_name}）。手動確認してください。")
+    article_html, review_candidates = embed_rakuten_links(article_html, products)
 
     if products:
         ARTICLES_DIR.mkdir(parents=True, exist_ok=True)
@@ -498,10 +553,40 @@ def task_pinterest() -> None:
 
 
 # ---------------------------------------------------------------------------
+# タスク4: 既存記事のリンクを最新版に更新
+# ---------------------------------------------------------------------------
+def task_relink() -> None:
+    html_files = sorted(ARTICLES_DIR.glob("*.html"))
+    if not html_files:
+        print("更新対象の記事が見つかりません。")
+        return
+
+    for path in html_files:
+        html = path.read_text(encoding="utf-8")
+        product_names = extract_product_names_from_article(html)
+        if not product_names:
+            print(f"スキップ: {path.name}（商品名が見つかりませんでした）")
+            continue
+
+        updated_html, review_candidates = embed_rakuten_links(html, product_names)
+
+        if updated_html != html:
+            path.write_text(updated_html, encoding="utf-8")
+            review_path = path.with_name(path.stem + ".links_review.json")
+            review_path.write_text(
+                json.dumps(review_candidates, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+            print(f"更新完了: {path.name}（商品 {len(product_names)} 件）")
+        else:
+            print(f"変化なし: {path.name}")
+
+
+# ---------------------------------------------------------------------------
 TASKS = {
     "genre": task_genre,
     "article": task_article,
     "pinterest": task_pinterest,
+    "relink": task_relink,
 }
 
 
