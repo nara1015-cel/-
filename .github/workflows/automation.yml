@@ -56,6 +56,7 @@ jobs:
           RAKUTEN_APP_ID: ${{ secrets.RAKUTEN_APP_ID }}
           RAKUTEN_ACCESS_KEY: ${{ secrets.RAKUTEN_ACCESS_KEY }}
           RAKUTEN_AFFILIATE_ID: ${{ secrets.RAKUTEN_AFFILIATE_ID }}
+          SITE_URL: ${{ vars.SITE_URL }}
         run: python scripts/run_task.py ${{ steps.task.outputs.name }}
 
       - name: 変更をコミット・プッシュ
