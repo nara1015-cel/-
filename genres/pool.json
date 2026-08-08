@@ -1,0 +1,62 @@
+[
+  {
+    "name": "シャンプー・コンディショナー",
+    "status": "pending"
+  },
+  {
+    "name": "洗濯洗剤・柔軟剤",
+    "status": "pending"
+  },
+  {
+    "name": "ボディソープ",
+    "status": "pending"
+  },
+  {
+    "name": "化粧水・基礎化粧品",
+    "status": "pending"
+  },
+  {
+    "name": "洗顔料",
+    "status": "pending"
+  },
+  {
+    "name": "ハンドクリーム",
+    "status": "pending"
+  },
+  {
+    "name": "コンタクトレンズ",
+    "status": "pending"
+  },
+  {
+    "name": "プロテイン・サプリメント",
+    "status": "pending"
+  },
+  {
+    "name": "電動歯ブラシ替えブラシ",
+    "status": "pending"
+  },
+  {
+    "name": "カミソリ・シェーバー替刃",
+    "status": "pending"
+  },
+  {
+    "name": "制汗剤・デオドラント",
+    "status": "pending"
+  },
+  {
+    "name": "マウスウォッシュ・歯磨き粉",
+    "status": "pending"
+  },
+  {
+    "name": "ヘアトリートメント・ヘアオイル",
+    "status": "pending"
+  },
+  {
+    "name": "靴下(メンズ/レディース)",
+    "status": "pending"
+  },
+  {
+    "name": "下着・インナー(ボクサーパンツ・ブラ)",
+    "status": "pending"
+  }
+]
