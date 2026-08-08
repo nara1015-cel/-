@@ -59,5 +59,65 @@
   {
     "name": "下着・インナー(ボクサーパンツ・ブラ)",
     "status": "pending"
+  },
+  {
+    "name": "マスク（不織布・立体マスク）",
+    "status": "pending"
+  },
+  {
+    "name": "入浴剤",
+    "status": "pending"
+  },
+  {
+    "name": "目薬",
+    "status": "pending"
+  },
+  {
+    "name": "ヘアブラシ・頭皮ブラシ",
+    "status": "pending"
+  },
+  {
+    "name": "食器用洗剤・食洗機用洗剤",
+    "status": "pending"
+  },
+  {
+    "name": "洗濯槽クリーナー",
+    "status": "pending"
+  },
+  {
+    "name": "ハンドソープ",
+    "status": "pending"
+  },
+  {
+    "name": "モバイルバッテリー",
+    "status": "pending"
+  },
+  {
+    "name": "ワイヤレスイヤホン",
+    "status": "pending"
+  },
+  {
+    "name": "枕（まくら）",
+    "status": "pending"
+  },
+  {
+    "name": "トイレ用洗剤・トイレブラシ",
+    "status": "pending"
+  },
+  {
+    "name": "ボディタオル・ボディブラシ",
+    "status": "pending"
+  },
+  {
+    "name": "アイマスク・安眠グッズ",
+    "status": "pending"
+  },
+  {
+    "name": "除菌・消臭スプレー",
+    "status": "pending"
+  },
+  {
+    "name": "USBケーブル・充電器",
+    "status": "pending"
   }
 ]
