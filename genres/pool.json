@@ -6,7 +6,8 @@
   },
   {
     "name": "洗濯洗剤・柔軟剤",
-    "status": "pending"
+    "status": "done",
+    "article_path": "site/articles/洗濯洗剤柔軟剤.html"
   },
   {
     "name": "ボディソープ",
