@@ -294,17 +294,28 @@ def task_article() -> None:
             })
         review_candidates.append({"searched_as": product_name, "candidates": candidates})
 
-        # 本文中の該当<h3>商品名</h3>を、一番手の候補で「未確認」の仮リンクに置き換える
+        # 本文中の該当<h3>商品名</h3>を、画像・価格・購入ボタン付きのブロックに置き換える
         if candidates:
             top = candidates[0]
             h3_target = f"<h3>{product_name}</h3>"
-            h3_replacement = (
-                f'<h3>⚠<a href="{top["affiliateUrl"]}" target="_blank" '
-                f'rel="nofollow sponsored noopener">{product_name}</a>'
-                f'<span style="font-size:.7rem;color:var(--brick);"> [要確認: 自動取得候補]</span></h3>'
+            price_text = f'{top["itemPrice"]:,}円' if top.get("itemPrice") else "価格不明"
+            image_html = (
+                f'<img src="{top["imageUrl"]}" alt="{product_name}" width="120" height="120" loading="lazy">'
+                if top.get("imageUrl")
+                else ""
             )
+            pc_head_block = f"""<div class="pc-head">
+      <a href="{top['affiliateUrl']}" target="_blank" rel="nofollow sponsored noopener" class="pc-photo">
+        {image_html}
+      </a>
+      <div>
+        <h3><a href="{top['affiliateUrl']}" target="_blank" rel="nofollow sponsored noopener">{product_name}</a><span style="font-size:.7rem;color:var(--brick);"> ⚠[要確認: 自動取得候補]</span></h3>
+        <p class="pc-price">価格：{price_text} <span class="mono">[実勢価格・要確認]</span></p>
+        <a href="{top['affiliateUrl']}" target="_blank" rel="nofollow sponsored noopener" class="pc-buybtn">楽天で見る</a>
+      </div>
+    </div>"""
             if h3_target in article_html:
-                article_html = article_html.replace(h3_target, h3_replacement, 1)
+                article_html = article_html.replace(h3_target, pc_head_block, 1)
 
             # 比較表内の同じ商品名の行にある価格セル（td class="num"）を実価格に置き換える
             # 表の行は <td>商品名</td>...<td class="num">価格円</td> の並びを想定
