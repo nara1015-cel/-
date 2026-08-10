@@ -26,7 +26,8 @@
   },
   {
     "name": "ハンドクリーム",
-    "status": "pending"
+    "status": "done",
+    "article_path": "site/articles/ハンドクリーム.html"
   },
   {
     "name": "コンタクトレンズ",
