@@ -31,7 +31,8 @@
   },
   {
     "name": "コンタクトレンズ",
-    "status": "pending"
+    "status": "done",
+    "article_path": "site/articles/コンタクトレンズ.html"
   },
   {
     "name": "プロテイン・サプリメント",
