@@ -36,7 +36,8 @@
   },
   {
     "name": "プロテイン・サプリメント",
-    "status": "pending"
+    "status": "done",
+    "article_path": "site/articles/プロテインサプリメント.html"
   },
   {
     "name": "電動歯ブラシ替えブラシ",
