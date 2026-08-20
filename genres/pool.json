@@ -41,7 +41,8 @@
   },
   {
     "name": "電動歯ブラシ替えブラシ",
-    "status": "pending"
+    "status": "done",
+    "article_path": "site/articles/電動歯ブラシ替えブラシ.html"
   },
   {
     "name": "カミソリ・シェーバー替刃",
