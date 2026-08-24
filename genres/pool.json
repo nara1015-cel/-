@@ -46,7 +46,8 @@
   },
   {
     "name": "カミソリ・シェーバー替刃",
-    "status": "pending"
+    "status": "done",
+    "article_path": "site/articles/カミソリシェーバー替刃.html"
   },
   {
     "name": "制汗剤・デオドラント",
