@@ -51,7 +51,8 @@
   },
   {
     "name": "制汗剤・デオドラント",
-    "status": "pending"
+    "status": "done",
+    "article_path": "site/articles/制汗剤デオドラント.html"
   },
   {
     "name": "マウスウォッシュ・歯磨き粉",
