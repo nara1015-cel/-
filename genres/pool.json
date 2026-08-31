@@ -56,7 +56,8 @@
   },
   {
     "name": "マウスウォッシュ・歯磨き粉",
-    "status": "pending"
+    "status": "done",
+    "article_path": "site/articles/マウスウォッシュ歯磨き粉.html"
   },
   {
     "name": "ヘアトリートメント・ヘアオイル",
