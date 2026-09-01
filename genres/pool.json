@@ -130,5 +130,65 @@
   {
     "name": "USBケーブル・充電器",
     "status": "pending"
+  },
+  {
+    "name": "デンタルフロス・歯間ブラシ",
+    "status": "pending"
+  },
+  {
+    "name": "ヘアカラー剤（白髪染め）",
+    "status": "pending"
+  },
+  {
+    "name": "ドッグフード",
+    "status": "pending"
+  },
+  {
+    "name": "猫砂",
+    "status": "pending"
+  },
+  {
+    "name": "掃除機用紙パック・フィルター",
+    "status": "pending"
+  },
+  {
+    "name": "空気清浄機フィルター",
+    "status": "pending"
+  },
+  {
+    "name": "リップクリーム",
+    "status": "pending"
+  },
+  {
+    "name": "ヘアワックス・スタイリング剤",
+    "status": "pending"
+  },
+  {
+    "name": "生理用ナプキン",
+    "status": "pending"
+  },
+  {
+    "name": "フェイスタオル・バスタオル",
+    "status": "pending"
+  },
+  {
+    "name": "枕カバー・ピローケース",
+    "status": "pending"
+  },
+  {
+    "name": "コーヒー豆・コーヒーフィルター",
+    "status": "pending"
+  },
+  {
+    "name": "メイクブラシ・パフ・スポンジ",
+    "status": "pending"
+  },
+  {
+    "name": "キッチンスポンジ・食器用ブラシ",
+    "status": "pending"
+  },
+  {
+    "name": "育毛剤・スカルプケアエッセンス",
+    "status": "pending"
   }
 ]
