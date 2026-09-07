@@ -66,7 +66,8 @@
   },
   {
     "name": "靴下(メンズ/レディース)",
-    "status": "pending"
+    "status": "done",
+    "article_path": "site/articles/靴下メンズレディース.html"
   },
   {
     "name": "下着・インナー(ボクサーパンツ・ブラ)",
